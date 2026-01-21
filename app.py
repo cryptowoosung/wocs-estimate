@@ -157,8 +157,8 @@ stamp_html = """
     display: inline-block;
     border: 3px solid red;
     border-radius: 50%;
-    width: 30px;  /* 32 -> 30 축소 */
-    height: 50px; /* 52 -> 50 축소 */
+    width: 30px;  /* 축소 */
+    height: 50px; /* 축소 */
     text-align: center;
     line-height: 1.1;
     color: red;
@@ -234,7 +234,8 @@ html_content += f"""
 <div style="margin-top: 30px; font-size: 14px; color: #555; border-top: 1px dashed #ccc; padding-top: 20px;">
 {'<strong>※ 특이사항:</strong> ' + note_input + '<br>' if note_input else ''}
 <strong>1. 견적 유효기간:</strong> 견적일로부터 10일<br>
-<strong>2. 하자 보증기간:</strong> 납품일로부터 1년 (천재지변 및 사용자 과실 제외)
+<strong>2. 하자 보증기간:</strong> 납품일로부터 1년 (천재지변 및 사용자 과실 제외)<br>
+<strong style="color:red;">3. 결제방법:</strong> 선금 50% / 잔금 50% (시공 완료 즉시)
 </div>
 <br><br>
 <div style="text-align:center; color:#888; font-size:13px;">귀하의 무궁한 발전을 기원합니다.</div>
@@ -345,6 +346,10 @@ def create_image():
     draw.text((50, y), "1. 견적 유효기간: 견적일로부터 10일", font=font_S, fill="gray")
     y += 30
     draw.text((50, y), "2. 하자 보증기간: 납품일로부터 1년 (천재지변 및 사용자 과실 제외)", font=font_S, fill="gray")
+    
+    # ★★★ 결제조건 추가됨 ★★★
+    y += 30
+    draw.text((50, y), "3. 결제방법: 선금 50% / 잔금 50% (시공 완료 즉시)", font=font_S, fill="black")
     
     y += 50
     draw.line((50, y, 750, y), fill="gray", width=1)
