@@ -2,6 +2,8 @@ import streamlit as st
 import datetime
 import io
 import base64
+import os
+import urllib.request
 
 # 라이브러리 체크
 try:
@@ -9,6 +11,19 @@ try:
 except ImportError:
     st.error("Pillow가 설치되지 않았습니다.")
     st.stop()
+
+# -----------------------------------------------------------------------------
+# 0. 폰트 자동 설치
+# -----------------------------------------------------------------------------
+def get_font_path():
+    font_filename = "NanumGothic.ttf"
+    if not os.path.exists(font_filename):
+        url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
+        try:
+            urllib.request.urlretrieve(url, font_filename)
+        except:
+            pass
+    return font_filename
 
 # -----------------------------------------------------------------------------
 # 1. 기본 설정
@@ -56,10 +71,8 @@ projection_map = {1.0: 0, 1.5: 1, 2.0: 2, 2.5: 3, 3.0: 4, 3.5: 5}
 with st.sidebar:
     st.title("⛺ 견적 정보 입력")
 
-    # 로고 업로드
     st.markdown("### 🏢 회사 로고")
     uploaded_logo = st.file_uploader("로고 이미지 업로드 (선택)", type=['png', 'jpg', 'jpeg'])
-
     st.markdown("---")
     
     st.markdown("### A. 기본 규격")
@@ -86,22 +99,16 @@ with st.sidebar:
     labor_price = st.number_input("기본 시공비 (원)", value=250000, step=10000)
     material_price = st.number_input("부자재비용 (원)", value=0, step=5000, help="앙카, 실리콘, 피스 등 부속 자재 비용")
 
-    st.markdown("---")
     st.markdown("### F. 현장 특수 조건 (추가 비용)")
-    
     use_remove = st.checkbox("기존 어닝 철거/폐기")
     remove_price = st.number_input("철거비용 (원)", value=0 if not use_remove else 50000, step=10000, disabled=not use_remove)
-
     use_ladder = st.checkbox("장비 사용 (스카이/사다리차)")
     ladder_price = st.number_input("장비 사용료 (원)", value=0 if not use_ladder else 150000, step=10000, disabled=not use_ladder)
-
     use_bracket = st.checkbox("특수 브라켓/판넬 보강")
     bracket_price = st.number_input("보강 자재비 (원)", value=0 if not use_bracket else 30000, step=5000, disabled=not use_bracket)
-
     use_pole = st.checkbox("보조 기둥 (잭서포트) 설치")
     pole_price = st.number_input("기둥 설치비 (원)", value=0 if not use_pole else 100000, step=10000, disabled=not use_pole)
 
-    st.markdown("---")
     st.markdown("### G. 기타/특이사항")
     note_input = st.text_input("비고 (메모)", value="")
 
@@ -136,7 +143,7 @@ total_price = sub_total + vat
 today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
 # -----------------------------------------------------------------------------
-# 5. HTML 화면 출력 (세로 타원 도장 CSS 구현)
+# 5. HTML 화면 출력
 # -----------------------------------------------------------------------------
 logo_html = ""
 if uploaded_logo is not None:
@@ -144,22 +151,22 @@ if uploaded_logo is not None:
     encoded = base64.b64encode(image_bytes).decode()
     logo_html = f'<img src="data:image/png;base64,{encoded}" style="max-height: 80px; max-width: 200px; margin-right: 20px;">'
 
-# 세로 타원형 도장 (CSS)
+# ★★★ 도장 크기 재축소 (CSS) ★★★
 stamp_html = """
 <div style="
     display: inline-block;
     border: 3px solid red;
     border-radius: 50%;
-    width: 18px;
-    height: 25px;
+    width: 30px;  /* 32 -> 30 축소 */
+    height: 50px; /* 52 -> 50 축소 */
     text-align: center;
-    line-height: 0.5;
+    line-height: 1.1;
     color: red;
     font-weight: bold;
-    font-size: 9px;
-    margin-left: 1px;
+    font-size: 13px;
+    margin-left: 8px;
     vertical-align: middle;
-    padding-top: 3px;
+    padding-top: 2px;
 ">
     김<br>우<br>성
 </div>
@@ -203,7 +210,6 @@ if use_print and print_price > 0:
 if use_guard and guard_price > 0:
     html_content += f"""<div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee;"><span>💧 물받이 추가</span><span>+{guard_price:,} 원</span></div>"""
 
-# 현장 특수 항목
 if use_remove and remove_price > 0:
     html_content += f"""<div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee;"><span>🏗️ 철거 및 폐기</span><span>+{remove_price:,} 원</span></div>"""
 if use_ladder and ladder_price > 0:
@@ -213,7 +219,6 @@ if use_bracket and bracket_price > 0:
 if use_pole and pole_price > 0:
     html_content += f"""<div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee;"><span>🏛️ 보조 기둥 (잭서포트)</span><span>+{pole_price:,} 원</span></div>"""
 
-# 시공비 및 부자재
 html_content += f"""<div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee;"><span>👷 기본 시공비</span><span>+{labor_price:,} 원</span></div>"""
 
 if material_price > 0:
@@ -239,42 +244,27 @@ html_content += f"""
 st.markdown(html_content, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 6. 이미지 저장 (폰트 문제 완벽 해결 버전)
+# 6. 이미지 저장 (위치 및 크기 수정됨)
 # -----------------------------------------------------------------------------
 def create_image():
     width, height = 800, 1400
     img = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(img)
     
-    # 폰트 로드 순서: 나눔고딕(서버) -> 맑은고딕(로컬) -> 기본(깨짐방지)
-    font_L = None
-    font_M = None
-    font_S = None
-    font_Bold = None
-    font_Stamp = None
-
-    fonts_to_try = ["NanumGothic.ttf", "malgun.ttf", "AppleGothic.ttf"]
-    
-    for font_name in fonts_to_try:
-        try:
-            font_L = ImageFont.truetype(font_name, 40)
-            font_M = ImageFont.truetype(font_name, 25)
-            font_S = ImageFont.truetype(font_name, 20)
-            font_Bold = ImageFont.truetype(font_name, 25) # 볼드체 없으면 일반체로 대체
-            font_Stamp = ImageFont.truetype(font_name, 18)
-            break # 성공하면 반복문 탈출
-        except:
-            continue
-            
-    # 만약 폰트를 하나도 못 찾았다면 기본 폰트 사용 (한글 깨질 수 있음)
-    if font_L is None:
+    font_path = get_font_path()
+    try:
+        font_L = ImageFont.truetype(font_path, 40)
+        font_M = ImageFont.truetype(font_path, 25)
+        font_S = ImageFont.truetype(font_path, 20)
+        font_Bold = ImageFont.truetype(font_path, 25)
+        font_Stamp = ImageFont.truetype(font_path, 14)
+    except:
         font_L = ImageFont.load_default()
         font_M = ImageFont.load_default()
         font_S = ImageFont.load_default()
         font_Bold = ImageFont.load_default()
         font_Stamp = ImageFont.load_default()
 
-    # 로고
     if uploaded_logo is not None:
         try:
             logo_img = Image.open(uploaded_logo)
@@ -286,33 +276,37 @@ def create_image():
         except:
             pass
 
-    # 제목 및 상단 정보
     draw.text((320, 50), "견  적  서", font=font_L, fill="black")
     draw.line((50, 130, 750, 130), fill="black", width=2)
     
     draw.text((450, 150), "우성어닝천막공사 (WOCS)", font=font_Bold, fill="black")
     draw.text((450, 190), "대표: 김우성", font=font_S, fill="black")
 
-    # ★★★ 진짜 세로 타원 도장 (이미지용) ★★★
+    # ★★★ 도장 크기 재축소 및 위치 조정 ★★★
     stamp_x = 580
-    stamp_y = 175
-    stamp_w = 40
-    stamp_h = 65
+    stamp_y = 178
+    stamp_w = 30 # 32 -> 30
+    stamp_h = 50 # 52 -> 50
     
-    draw.ellipse((stamp_x, stamp_y, stamp_x + stamp_w, stamp_y + stamp_h), outline="red", width=3)
-    draw.text((stamp_x + 11, stamp_y + 5), "김", font=font_Stamp, fill="red")
-    draw.text((stamp_x + 11, stamp_y + 23), "우", font=font_Stamp, fill="red")
-    draw.text((stamp_x + 11, stamp_y + 41), "성", font=font_Stamp, fill="red")
+    draw.ellipse((stamp_x, stamp_y, stamp_x + stamp_w, stamp_y + stamp_h), outline="red", width=2)
+    # (도장 글씨 좌표 미세 조정)
+    draw.text((stamp_x + 8, stamp_y + 4), "김", font=font_Stamp, fill="red")
+    draw.text((stamp_x + 8, stamp_y + 18), "우", font=font_Stamp, fill="red")
+    draw.text((stamp_x + 8, stamp_y + 32), "성", font=font_Stamp, fill="red")
 
-    draw.text((450, 220), f"사업자번호: {MY_BUSINESS_NUM}", font=font_S, fill="black")
-    draw.text((450, 250), "전남 화순군 사평면 유마로 592", font=font_S, fill="black")
-    draw.text((450, 280), "Tel: 010-4337-0582", font=font_S, fill="black")
-    draw.text((450, 310), f"{MY_BANK_INFO}", font=font_S, fill="blue")
+    # ★★★ 텍스트 위치 하향 조정 (겹침 방지) ★★★
+    # 도장 끝부분(Y=228)과 간격을 두기 위해 230 -> 245로 변경
+    text_start_y = 245
+    draw.text((450, text_start_y), f"사업자번호: {MY_BUSINESS_NUM}", font=font_S, fill="black")
+    draw.text((450, text_start_y + 25), "전남 화순군 사평면 유마로 592", font=font_S, fill="black")
+    draw.text((450, text_start_y + 50), "Tel: 010-4337-0582", font=font_S, fill="black")
+    draw.text((450, text_start_y + 75), f"{MY_BANK_INFO}", font=font_S, fill="blue")
 
     draw.text((50, 170), f"수신: {customer_name} 귀하", font=font_M, fill="black")
     draw.text((50, 210), f"날짜: {today_str}", font=font_M, fill="black")
 
-    line_y = 360
+    # 라인 위치도 하향 조정
+    line_y = 380 
     draw.line((50, line_y, 750, line_y), fill="gray", width=1)
     y = line_y + 30
     def draw_row(name, price):
@@ -326,12 +320,10 @@ def create_image():
     if motor_price > 0 or drive_type == "전동 (리모컨)": draw_row(f"구동 방식 ({drive_type})", motor_price)
     if use_print and print_price > 0: draw_row("레이스 인쇄", print_price)
     if use_guard and guard_price > 0: draw_row("물받이 추가", guard_price)
-    
     if use_remove and remove_price > 0: draw_row("철거 및 폐기", remove_price)
     if use_ladder and ladder_price > 0: draw_row("장비 사용 (스카이/사다리)", ladder_price)
     if use_bracket and bracket_price > 0: draw_row("특수 브라켓/보강", bracket_price)
     if use_pole and pole_price > 0: draw_row("보조 기둥 (잭서포트)", pole_price)
-    
     draw_row("기본 시공비", labor_price)
     if material_price > 0: draw_row("부자재비용", material_price)
 
