@@ -127,6 +127,7 @@ if base_price == 0:
     st.error(f"❌ {target_len}m x {proj_input}m 규격은 제작 불가")
     st.stop()
 
+# 모든 비용 합산
 sub_total = (base_price + fabric_price + motor_price + print_price + guard_price + 
              labor_price + material_price + 
              remove_price + ladder_price + bracket_price + pole_price)
@@ -149,13 +150,13 @@ stamp_html = """
     display: inline-block;
     border: 3px solid red;
     border-radius: 50%;
-    width: 15px;
+    width: 18px;
     height: 25px;
     text-align: center;
     line-height: 0.5;
     color: red;
     font-weight: bold;
-    font-size: 8px;
+    font-size: 9px;
     margin-left: 1px;
     vertical-align: middle;
     padding-top: 3px;
@@ -238,19 +239,35 @@ html_content += f"""
 st.markdown(html_content, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 6. 이미지 저장 (세로 타원 도장 + 세로 글씨)
+# 6. 이미지 저장 (폰트 문제 완벽 해결 버전)
 # -----------------------------------------------------------------------------
 def create_image():
     width, height = 800, 1400
     img = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(img)
-    try:
-        font_L = ImageFont.truetype("malgun.ttf", 40)
-        font_M = ImageFont.truetype("malgun.ttf", 25)
-        font_S = ImageFont.truetype("malgun.ttf", 20)
-        font_Bold = ImageFont.truetype("malgunbd.ttf", 25)
-        font_Stamp = ImageFont.truetype("malgunbd.ttf", 18) # 도장용 작은 폰트
-    except:
+    
+    # 폰트 로드 순서: 나눔고딕(서버) -> 맑은고딕(로컬) -> 기본(깨짐방지)
+    font_L = None
+    font_M = None
+    font_S = None
+    font_Bold = None
+    font_Stamp = None
+
+    fonts_to_try = ["NanumGothic.ttf", "malgun.ttf", "AppleGothic.ttf"]
+    
+    for font_name in fonts_to_try:
+        try:
+            font_L = ImageFont.truetype(font_name, 40)
+            font_M = ImageFont.truetype(font_name, 25)
+            font_S = ImageFont.truetype(font_name, 20)
+            font_Bold = ImageFont.truetype(font_name, 25) # 볼드체 없으면 일반체로 대체
+            font_Stamp = ImageFont.truetype(font_name, 18)
+            break # 성공하면 반복문 탈출
+        except:
+            continue
+            
+    # 만약 폰트를 하나도 못 찾았다면 기본 폰트 사용 (한글 깨질 수 있음)
+    if font_L is None:
         font_L = ImageFont.load_default()
         font_M = ImageFont.load_default()
         font_S = ImageFont.load_default()
@@ -269,29 +286,25 @@ def create_image():
         except:
             pass
 
+    # 제목 및 상단 정보
     draw.text((320, 50), "견  적  서", font=font_L, fill="black")
     draw.line((50, 130, 750, 130), fill="black", width=2)
     
     draw.text((450, 150), "우성어닝천막공사 (WOCS)", font=font_Bold, fill="black")
-    
-    # 대표명
     draw.text((450, 190), "대표: 김우성", font=font_S, fill="black")
-    
+
     # ★★★ 진짜 세로 타원 도장 (이미지용) ★★★
-    # 위치: '김우성' 글자 바로 옆 (약 580px 지점)
     stamp_x = 580
     stamp_y = 175
     stamp_w = 40
     stamp_h = 65
     
-    # 세로 타원 그리기
     draw.ellipse((stamp_x, stamp_y, stamp_x + stamp_w, stamp_y + stamp_h), outline="red", width=3)
-    
-    # 세로 글씨 쓰기 (김/우/성)
     draw.text((stamp_x + 11, stamp_y + 5), "김", font=font_Stamp, fill="red")
     draw.text((stamp_x + 11, stamp_y + 23), "우", font=font_Stamp, fill="red")
     draw.text((stamp_x + 11, stamp_y + 41), "성", font=font_Stamp, fill="red")
 
+    draw.text((450, 220), f"사업자번호: {MY_BUSINESS_NUM}", font=font_S, fill="black")
     draw.text((450, 250), "전남 화순군 사평면 유마로 592", font=font_S, fill="black")
     draw.text((450, 280), "Tel: 010-4337-0582", font=font_S, fill="black")
     draw.text((450, 310), f"{MY_BANK_INFO}", font=font_S, fill="blue")
